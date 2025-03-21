@@ -1,4 +1,3 @@
-cat > ~/python-guessing-game/.github/workflows/build-deploy.yml << 'EOF'
 name: Build and Deploy
 
 on:
@@ -71,4 +70,4 @@ jobs:
           
           # Verify deployment
           kubectl rollout status deployment/guessing-game -n ${{ env.K8S_NAMESPACE }}
-EOF
+          
