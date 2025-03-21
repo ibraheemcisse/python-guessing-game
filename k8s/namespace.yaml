@@ -1,0 +1,109 @@
+# Create namespace.yaml
+cat > ~/python-guessing-game/k8s/namespace.yaml << 'EOF'
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: guessing-game
+EOF
+
+# Create configmap.yaml
+cat > ~/python-guessing-game/k8s/configmap.yaml << 'EOF'
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: guessing-game-config
+  namespace: guessing-game
+data:
+  TARGET_NUMBER: "42"
+  PORT: "5000"
+EOF
+
+# Create deployment.yaml
+cat > ~/python-guessing-game/k8s/deployment.yaml << 'EOF'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guessing-game
+  namespace: guessing-game
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: guessing-game
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: guessing-game
+    spec:
+      containers:
+      - name: guessing-game
+        image: yourrepo/python-guessing-game:latest  # This will be replaced by GitHub Actions
+        ports:
+        - containerPort: 5000
+        envFrom:
+        - configMapRef:
+            name: guessing-game-config
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "256Mi"
+          requests:
+            cpu: "0.1"
+            memory: "128Mi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+EOF
+
+# Create service.yaml
+cat > ~/python-guessing-game/k8s/service.yaml << 'EOF'
+apiVersion: v1
+kind: Service
+metadata:
+  name: guessing-game
+  namespace: guessing-game
+spec:
+  selector:
+    app: guessing-game
+  ports:
+  - port: 80
+    targetPort: 5000
+  type: ClusterIP
+EOF
+
+# Create ingress.yaml
+cat > ~/python-guessing-game/k8s/ingress.yaml << 'EOF'
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: guessing-game
+  namespace: guessing-game
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+spec:
+  rules:
+  - host: guessing-game.example.com  # Replace with your actual domain
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: guessing-game
+            port:
+              number: 80
+EOF
